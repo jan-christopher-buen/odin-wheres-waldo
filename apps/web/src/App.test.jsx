@@ -207,3 +207,24 @@ test.each([401, 410])(
     ).toBeEnabled()
   },
 )
+
+test('a freshly created round supports immediate keyboard selection without a restore delay', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+    if (url.endsWith('/scene')) return response(scene)
+    if (url.endsWith('/rounds'))
+      return response({
+        credential: 'e'.repeat(64),
+        startedAt: new Date().toISOString(),
+      })
+    return new Promise(() => {})
+  })
+  render(<App />)
+  fireEvent.load(await screen.findByRole('img'))
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Start searching →' }),
+  )
+  fireEvent.keyDown(screen.getByRole('group'), { key: 'Enter' })
+  expect(
+    await screen.findByRole('dialog', { name: 'Who did you find?' }),
+  ).toBeInTheDocument()
+})

@@ -22,7 +22,8 @@ export default function App() {
     [name, setName] = useState('')
   const completeHeading = useRef(null),
     dialog = useRef(null),
-    lock = useRef(false)
+    lock = useRef(false),
+    createdCredential = useRef(null)
   const targeting = useTargeting(round, busy || !loaded || restoring)
   const { selection, setSelection, closeMenu } = targeting
   const loadScene = () => {
@@ -41,7 +42,7 @@ export default function App() {
     return () => controller.abort()
   }, [])
   useEffect(() => {
-    if (!credential) {
+    if (!credential || credential === createdCredential.current) {
       setRestoring(false)
       return
     }
@@ -83,6 +84,7 @@ export default function App() {
     setError('')
     try {
       const data = await request('/rounds', { body: { sceneId: scene.id } })
+      createdCredential.current = data.credential
       sessionStorage.setItem('market-round', data.credential)
       setCredential(data.credential)
       setRound({ ...data, markers: [] })
