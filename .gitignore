@@ -6,3 +6,5 @@ dist/
 coverage/
 *.log
 apps/api/generated/
+
+.vercel/

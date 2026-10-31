@@ -88,7 +88,7 @@ The server records start and completion timestamps and validates every find. Dat
 
 ## Deployment preparation
 
-No hosted resources or live deployment are included. See [deployment configuration](docs/deployment.md) for the Neon / Render / Vercel handoff.
+See [deployment configuration](docs/deployment.md) for the Neon / Render / Vercel setup.
 
 ## Assets and limitations
 

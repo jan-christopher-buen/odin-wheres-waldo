@@ -1,6 +1,6 @@
 # Deployment configuration
 
-Deploy only after reviewing and pushing the repository. There are no provisioned resources or confirmed public URLs yet.
+Review and push the repository before releasing. This guide covers the Neon database, Render API, and Vercel frontend configuration.
 
 Use Node 24 on both build hosts. Keep the repository root as the working directory so npm workspaces and the root lockfile remain available.
 
