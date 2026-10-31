@@ -20,8 +20,8 @@ const scene = {
   asset: '/market.svg',
   targets: [{ id: 'cat', name: 'Clementine', symbol: 'cat' }],
 }
-const response = (data, ok = true) =>
-  Promise.resolve({ ok, json: async () => data })
+const response = (data, ok = true, status = ok ? 200 : 503) =>
+  Promise.resolve({ ok, status, json: async () => data })
 test('coordinate calculation accounts for rendered offsets and dimensions', () => {
   expect(
     position(250, 300, { left: 100, top: 200, width: 300, height: 200 }),
@@ -159,3 +159,51 @@ test('leaderboard supports errors, retry, and empty state', async () => {
   ).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Close leaderboard' }))
 })
+
+test('temporary restore failures keep the round credential and retry saved progress', async () => {
+  const credential = 'c'.repeat(64)
+  sessionStorage.setItem('market-round', credential)
+  let attempts = 0
+  vi.spyOn(globalThis, 'fetch').mockImplementation((url, options) => {
+    if (url.endsWith('/scene')) return response(scene)
+    expect(options.headers.Authorization).toBe(`Bearer ${credential}`)
+    attempts++
+    return attempts === 1
+      ? response({ error: 'The market is waking up. Please retry.' }, false)
+      : response({
+          startedAt: new Date().toISOString(),
+          markers: [{ targetId: 'cat', x: 0.5, y: 0.5 }],
+        })
+  })
+  render(<App />)
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'The market is waking up',
+  )
+  expect(sessionStorage.getItem('market-round')).toBe(credential)
+  await userEvent.click(screen.getByRole('button', { name: 'Retry round' }))
+  expect(await screen.findByText('✓ FOUND')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test.each([401, 410])(
+  'invalid or expired rounds (%s) clear stale credentials and allow a new game',
+  async (status) => {
+    sessionStorage.setItem('market-round', 'd'.repeat(64))
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
+      url.endsWith('/scene')
+        ? response(scene)
+        : response({ error: 'Start another round.' }, false, status),
+    )
+    render(<App />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Start another round.',
+    )
+    await waitFor(() =>
+      expect(sessionStorage.getItem('market-round')).toBeNull(),
+    )
+    fireEvent.load(await screen.findByRole('img'))
+    expect(
+      screen.getByRole('button', { name: 'Start searching →' }),
+    ).toBeEnabled()
+  },
+)

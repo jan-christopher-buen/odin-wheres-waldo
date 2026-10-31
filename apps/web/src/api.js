@@ -3,8 +3,8 @@ export async function request(path, { credential, body, signal } = {}) {
   const response = await fetch(`${base}/api${path}`, {
     method: body ? 'POST' : 'GET',
     signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(15000)])
-      : AbortSignal.timeout(15000),
+      ? AbortSignal.any([signal, AbortSignal.timeout(90000)])
+      : AbortSignal.timeout(90000),
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(credential ? { Authorization: `Bearer ${credential}` } : {}),
@@ -13,7 +13,10 @@ export async function request(path, { credential, body, signal } = {}) {
   })
   const data = await response.json()
   if (!response.ok)
-    throw new Error(data.error || 'Connection failed. Please retry.')
+    throw Object.assign(
+      new Error(data.error || 'Connection failed. Please retry.'),
+      { status: response.status },
+    )
   return data
 }
 export const position = (clientX, clientY, rect) => ({

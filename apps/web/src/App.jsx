@@ -12,6 +12,8 @@ export default function App() {
   const [round, setRound] = useState(null),
     [credential, setCredential] = useState(savedCredential),
     [busy, setBusy] = useState(false)
+  const [restoreAttempt, setRestoreAttempt] = useState(0)
+  const [restoring, setRestoring] = useState(Boolean(credential))
   const [feedback, setFeedback] = useState(''),
     [now, setNow] = useState(Date.now())
   const [board, setBoard] = useState(null),
@@ -21,7 +23,7 @@ export default function App() {
   const completeHeading = useRef(null),
     dialog = useRef(null),
     lock = useRef(false)
-  const targeting = useTargeting(round, busy || !loaded)
+  const targeting = useTargeting(round, busy || !loaded || restoring)
   const { selection, setSelection, closeMenu } = targeting
   const loadScene = () => {
     setError('')
@@ -39,19 +41,29 @@ export default function App() {
     return () => controller.abort()
   }, [])
   useEffect(() => {
-    if (!credential) return
+    if (!credential) {
+      setRestoring(false)
+      return
+    }
+    setRestoring(true)
     const controller = new AbortController()
     request('/round', { credential, signal: controller.signal })
       .then(setRound)
       .catch((e) => {
         if (e.name !== 'AbortError') {
           setError(e.message)
-          sessionStorage.removeItem('market-round')
-          setCredential(null)
+          if (e.status === 401 || e.status === 410) {
+            sessionStorage.removeItem('market-round')
+            setCredential(null)
+            setRound(null)
+          }
         }
       })
+      .finally(() => {
+        if (!controller.signal.aborted) setRestoring(false)
+      })
     return () => controller.abort()
-  }, [credential])
+  }, [credential, restoreAttempt])
   useEffect(() => {
     if (!round || round.completedAt) return
     const id = setInterval(() => setNow(Date.now()), 100)
@@ -186,10 +198,21 @@ export default function App() {
           <div className="error" role="alert">
             {error}{' '}
             {!scene && <button onClick={loadScene}>Retry loading</button>}
+            {credential && !round && (
+              <button
+                disabled={restoring}
+                onClick={() => {
+                  setError('')
+                  setRestoreAttempt((n) => n + 1)
+                }}
+              >
+                Retry round
+              </button>
+            )}
           </div>
         )}
         {!scene ? (
-          <p role="status">Opening the market…</p>
+          <p role="status">Opening the market… This can take a minute.</p>
         ) : (
           <>
             <TargetList targets={scene.targets} found={found} />
@@ -200,7 +223,7 @@ export default function App() {
                   ? 'Click a spot, then choose who you found.'
                   : 'Meet the regulars above. Ready to look closer?'}
               </span>
-              <button disabled={!loaded || busy} onClick={start}>
+              <button disabled={!loaded || busy || restoring} onClick={start}>
                 {busy
                   ? 'Please wait…'
                   : round
