@@ -6,7 +6,7 @@ Use Node 24 on both build hosts. Keep the repository root as the working directo
 
 ## PostgreSQL (Neon)
 
-Create a dedicated production database. Supply its PostgreSQL URL with TLS as `DATABASE_URL` to Render. Use the pooled URL for application traffic; set `DIRECT_DATABASE_URL` to its direct URL for migration operations. Do not disable TLS certificate verification.
+Create a dedicated production database. Use `sslmode=verify-full` for certificate-verified TLS. Supply its PostgreSQL URL as `DATABASE_URL` to Render. Use the pooled URL for application traffic; set `DIRECT_DATABASE_URL` to its direct URL for migration operations. Do not disable TLS certificate verification.
 
 The Prisma CLI reads `DIRECT_DATABASE_URL` (falling back to `DATABASE_URL`) through `apps/api/prisma.config.ts`; the API uses `@prisma/adapter-pg` with the same environment variable. No local socket URL belongs in hosted configuration.
 
@@ -14,12 +14,13 @@ The Prisma CLI reads `DIRECT_DATABASE_URL` (falling back to `DATABASE_URL`) thro
 
 Create a Node web service with repository root directory left empty.
 
-- Build: `npm ci && npm run db:generate`
-- Pre-deploy: `npm run db:migrate`
-- Initial seed, once after migrations: `npm run db:seed`
+- Compute plan: **Free**.
+- Build: `npm ci --include=dev && npm run db:generate && npm run db:migrate && npm run db:seed`
+- Pre-deploy: leave empty; Render only supports this command on paid services.
+- The build applies committed migrations through the direct connection, then upserts only the scene and its four targets. It does not import local data or erase rounds and scores. Future migrations must remain compatible with the running release while the new build is prepared.
 - Start: `npm start`
 - Health check: `/api/health` (process health; does not check database)
-- Environment: `NODE_ENV=production`, `DATABASE_URL`, `DIRECT_DATABASE_URL`, `TRUST_PROXY=1`, and `CORS_ORIGINS`.
+- Environment: `NODE_ENV=production`, `NODE_VERSION=24.22.0`, `DATABASE_URL`, `DIRECT_DATABASE_URL`, `TRUST_PROXY=1`, and `CORS_ORIGINS`.
 - Render supplies `PORT`; the Express listener binds to all interfaces.
 
 Set `CORS_ORIGINS` to the **exact** Vercel production origin, for example the actual `https://your-project.vercel.app`, without a trailing slash. Multiple deliberately approved origins may be comma-separated. Do not use `*` or accept arbitrary preview origins. Trust exactly one proxy only when the service is behind Render's ingress. Protect database URLs in the host's secret environment settings.
