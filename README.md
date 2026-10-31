@@ -2,6 +2,8 @@
 
 A little search after dark. Find four peculiar regulars in an original lantern-lit market, then optionally put your time on the leaderboard.
 
+[Play Midnight Market](https://midnight-market-eight.vercel.app) · [API health](https://midnight-market-api.onrender.com/api/health)
+
 Built for [The Odin Project’s Where’s Waldo assignment](https://www.theodinproject.com/lessons/nodejs-where-s-waldo-a-photo-tagging-app).
 
 ## Play
@@ -93,5 +95,7 @@ See [deployment configuration](docs/deployment.md) for the Neon / Render / Verce
 ## Assets and limitations
 
 The market and portraits are original SVG artwork under [MIT](LICENSE). Barlow Condensed and DM Sans are loaded from Google Fonts under the SIL Open Font License, with system fallbacks. No copyrighted Waldo illustration is used.
+
+The frontend uses Vercel Hobby, the API uses Render Free, and production data lives in a dedicated Neon Free database. The API sleeps after inactivity and can take about a minute to wake. Requests allow up to 90 seconds; temporary connection failures preserve saved round credentials and offer a retry.
 
 One scene and four targets are implemented. This is a casual search game: inspecting SVG source or automating requests can still reveal or solve the puzzle. Bearer credentials in browser storage are exposed to any script running on the same origin, so keep that origin trusted. Rate limiting is in-memory per API instance; multi-instance deployments need a shared limiter. Anonymous rounds accumulate; production operation should add a retention policy. Display names are public and have no moderation system.
